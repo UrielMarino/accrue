@@ -1,4 +1,4 @@
-// API pública de @chirola/contracts. Los contratos de installments,
+// API pública de @accrue/contracts. Los contratos de installments,
 // spaces, pockets y la serie mensual se agregan cuando exista su primer
 // endpoint (F3–F4) — no antes: un schema sin consumidor es un archivo muerto.
 

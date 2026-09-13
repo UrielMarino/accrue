@@ -1,5 +1,5 @@
 // Valores runtime compartidos entre front y back. Regla anti-fuga (PLAN.md #6):
-// contracts NO importa valores de @chirola/domain (solo `import type`, y por eso
+// contracts NO importa valores de @accrue/domain (solo `import type`, y por eso
 // domain es devDependency); los enums que el wire necesita como VALOR se
 // declaran acá y un guard de tipos en contracts.test.ts fuerza la igualdad.
 

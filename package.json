@@ -1,0 +1,22 @@
+{
+  "name": "accrue",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Self-hosted personal finance built on accrual",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "packageManager": "pnpm@12.4.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --build && tsc -p tsconfig.test.json",
+    "check": "pnpm run typecheck && pnpm run test"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

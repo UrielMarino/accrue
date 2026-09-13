@@ -1,4 +1,4 @@
-// API pública de @chirola/domain. Nada fuera del paquete importa archivos
+// API pública de @accrue/domain. Nada fuera del paquete importa archivos
 // internos: siempre a través de acá o de los subpaths por feature.
 
 export * from "./installments.js";

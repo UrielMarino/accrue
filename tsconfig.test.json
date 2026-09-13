@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    // En los tests la fixture es conocida y se indexa a mano constantemente.
+    // La regla sigue activa donde importa: el código de producción.
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["packages/*/src/**/*.test.ts", "packages/*/src/test-builders.ts"]
+}

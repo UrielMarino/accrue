@@ -33,3 +33,5 @@ pnpm-debug.log*
 *.sqlite
 *.sqlite3
 /data/
+
+dist/

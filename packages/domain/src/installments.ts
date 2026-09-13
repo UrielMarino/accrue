@@ -98,7 +98,8 @@ export function nextInstallmentToConfirm(
   );
   const index = ordered.findIndex((m) => m.status !== "CONFIRMED" && m.status !== "CANCELLED");
   if (index === -1) return null;
-  return { movement: ordered[index], number: index + 1, count: plan.installmentCount };
+  // findIndex ya descartó -1, así que la posición existe.
+  return { movement: ordered[index]!, number: index + 1, count: plan.installmentCount };
 }
 
 // Fecha de la próxima cuota impaga; null cuando el plan está completo.
@@ -146,7 +147,8 @@ export function installmentLabels(
 // Preview del monto de la cuota típica (sin resto), en centavos: la última del
 // reparto. La primera puede llevar hasta `count − 1` centavos extra (§1).
 export function installmentAmountPreview(totalAmount: number, count: number): number {
-  return reparto(totalAmount, count)[count - 1];
+  // reparto devuelve exactamente `count` partes (§1), así que la última existe.
+  return reparto(totalAmount, count)[count - 1]!;
 }
 
 /**
@@ -214,7 +216,7 @@ export function buildInstallmentPurchase(
     if (!isIncome && settled) paidCount++;
     movements.push({
       type: input.type,
-      amount: amounts[i],
+      amount: amounts[i]!, // i < count, y amounts tiene count partes
       description: input.description,
       category: input.category,
       status,

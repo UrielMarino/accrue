@@ -1,4 +1,4 @@
-import type { MovementStatus, MovementType } from "@chirola/domain";
+import type { MovementStatus, MovementType } from "@accrue/domain";
 import { describe, expect, it } from "vitest";
 import {
   createMovementSchema,
