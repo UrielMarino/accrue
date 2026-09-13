@@ -1,0 +1,35 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+build/
+.output/
+*.tsbuildinfo
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# test & coverage
+coverage/
+.vitest/
+
+# editors & os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# local data
+*.sqlite
+*.sqlite3
+/data/
