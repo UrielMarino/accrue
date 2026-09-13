@@ -54,3 +54,21 @@ export function formatCentavosExactos(centavos: number): string {
   const cuerpo = pesos > 0 ? `${nf.format(pesos)},${String(cent).padStart(2, "0")}` : `0,${String(cent).padStart(2, "0")}`;
   return `${centavos < 0 ? "−" : ""}$ ${cuerpo}`;
 }
+
+/** "2026-09-12" → "Hoy · viernes 12" o "Viernes 12 de septiembre". El día
+ *  relativo gana cuando aplica: nadie piensa la fecha de hoy en formato largo. */
+export function formatFechaLarga(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const fecha = new Date(y, m - 1, d);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const dias = Math.round((fecha.getTime() - hoy.getTime()) / 86_400_000);
+  const dia = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric" }).format(fecha);
+  const cap = dia.charAt(0).toUpperCase() + dia.slice(1);
+  if (dias === 0) return `Hoy · ${dia}`;
+  if (dias === -1) return `Ayer · ${dia}`;
+  if (dias === 1) return `Mañana · ${dia}`;
+  const mes = new Intl.DateTimeFormat("es-AR", { month: "long" }).format(fecha);
+  return `${cap} de ${mes}`;
+}

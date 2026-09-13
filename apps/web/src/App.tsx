@@ -1,137 +1,120 @@
-import { reparto } from "@accrue/domain";
-import { useEffect, useMemo, useState } from "react";
-import {
-  formatCentavos,
-  formatCentavosExactos,
-  formatFecha,
-  formatMesAnio,
-  parsePesos,
-} from "./money.js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ApiError, api, type Categoria, type Movimiento } from "./api.js";
+import { NuevaCuotas } from "./NuevaCuotas.jsx";
+import { formatCentavos, formatFechaLarga } from "./money.js";
+import { presets, type Rango } from "./rango.js";
 
-// Las ocho categorías del sistema, con su color fijo. Vienen de la API en
-// cuanto exista el endpoint; hoy es la misma lista que siembra el server.
-const CATEGORIAS = [
-  { id: "alimentos", nombre: "Alimentos", v: "--c-alimentos" },
-  { id: "vivienda", nombre: "Vivienda", v: "--c-vivienda" },
-  { id: "transporte", nombre: "Transporte", v: "--c-transporte" },
-  { id: "salud", nombre: "Salud", v: "--c-salud" },
-  { id: "ocio", nombre: "Entretenimiento", v: "--c-ocio" },
-  { id: "servicios", nombre: "Servicios", v: "--c-servicios" },
-  { id: "ahorro", nombre: "Ahorro", v: "--c-ahorro" },
-  { id: "otros", nombre: "Otros", v: "--c-otros" },
-] as const;
+const ICONOS: Record<string, string> = {
+  alimentos: "M4 7h16l-1.5 11a2 2 0 0 1-2 1.8H7.5a2 2 0 0 1-2-1.8Z M9 7V5a3 3 0 0 1 6 0v2",
+  vivienda: "M3 10.5 12 3l9 7.5 M5 9.5V20h14V9.5 M10 20v-6h4v6",
+  transporte: "M3 7h18v9H3z M3 12h18M7 20v-2M17 20v-2",
+  salud: "M12 20s-7-4.5-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7-2.7 M14 13h7M17.5 9.5v7",
+  ocio: "M2.5 5h19v14h-19z M10 9.5l5 2.5-5 2.5Z",
+  servicios: "M13 2 4.5 13.5H11L9.5 22 19 9.8h-6.4Z",
+  ahorro: "M4 12a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v3a2 2 0 0 1-2 2h-1v2h-3v-2H10v2H7v-2.3A6 6 0 0 1 4 12Z",
+  otros: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z M12 16v.01M12 13a2.2 2.2 0 1 0-2.2-2.6",
+};
 
-const colorDe = (id: string) => CATEGORIAS.find((c) => c.id === id)?.v ?? "--c-otros";
+const VAR: Record<string, string> = {
+  alimentos: "--c-alimentos",
+  vivienda: "--c-vivienda",
+  transporte: "--c-transporte",
+  salud: "--c-salud",
+  ocio: "--c-ocio",
+  servicios: "--c-servicios",
+  ahorro: "--c-ahorro",
+  otros: "--c-otros",
+};
 
-interface Plan {
-  id: string;
-  description: string;
-  totalAmount: number;
-  installmentCount: number;
-  paidCount: number;
-  startDate: string;
-  status: string;
-  category: string | null;
-}
-interface Cuota {
-  id: string;
-  number: number;
-  amount: number;
-  date: string;
-  status: "CONFIRMED" | "PENDING" | "CANCELLED";
-}
-
-const hoyISO = () => {
+const hoy = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+/** VENCIDO no es un estado guardado: es pendiente con fecha pasada (§2). */
+const estaVencido = (m: Movimiento) => m.status === "PENDING" && m.date < hoy();
+
+type Filtro = "TODOS" | "EXPENSE" | "INCOME";
+
 export function App() {
-  const [descripcion, setDescripcion] = useState("Heladera Samsung");
-  const [categoria, setCategoria] = useState<string>("vivienda");
-  const [tipo, setTipo] = useState<"EXPENSE" | "INCOME">("EXPENSE");
-  const [importe, setImporte] = useState("890.000");
-  const [cuotas, setCuotas] = useState("12");
-  const [desde, setDesde] = useState(hoyISO());
+  const opciones = useMemo(() => presets(), []);
+  const [rango, setRango] = useState<Rango>(opciones[0]!);
+  const [filtro, setFiltro] = useState<Filtro>("TODOS");
+  const [pendientes, setPendientes] = useState(true);
 
-  const [planes, setPlanes] = useState<Plan[]>([]);
-  const [cuotasDe, setCuotasDe] = useState<Record<string, Cuota[]>>({});
-  const [abierto, setAbierto] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
+  const [movs, setMovs] = useState<Movimiento[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [abrirAlta, setAbrirAlta] = useState(false);
+  const [menuRango, setMenuRango] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const total = parsePesos(importe);
-  const n = Number(cuotas);
-  const nValido = Number.isInteger(n) && n >= 2 && n <= 120;
+  const cargar = useCallback(async () => {
+    setError(null);
+    try {
+      const lista = await api.movimientos(rango.desde || undefined, rango.hasta || undefined);
+      setMovs(lista);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "No se pudieron leer los movimientos");
+    } finally {
+      setCargando(false);
+    }
+  }, [rango]);
 
-  // La previsualización usa LA función de reparto del dominio: exactamente la
-  // misma que corre el server. Si acá mostráramos total/n redondeado, el número
-  // del formulario no coincidiría con el que queda guardado.
-  const partes = useMemo(
-    () => (total && total > 0 && nValido ? reparto(total, n) : null),
-    [total, n, nValido],
-  );
-  const primera = partes?.[0] ?? null;
-  const resto = partes && partes.length > 1 ? partes[partes.length - 1] ?? null : null;
-  const hayResto = primera !== null && resto !== null && primera !== resto;
-  const diferencia = hayResto && primera !== null && resto !== null ? primera - resto : 0;
-  // ¿La diferencia del reparto se nota en pesos enteros, que es como se muestra?
-  const visibleEnPesos =
-    hayResto && primera !== null && resto !== null
-      ? Math.round(primera / 100) !== Math.round(resto / 100)
-      : false;
-
-  async function cargar() {
-    const res = await fetch("/api/installment-plans");
-    if (res.ok) setPlanes(await res.json());
-  }
-
-  /** Las cuotas se piden recién al abrir el plan: la lista no las necesita y
-   *  pedirlas todas de entrada sería traer cientos de filas para mostrar una. */
-  async function traerCuotas(planId: string) {
-    if (cuotasDe[planId]) return;
-    const res = await fetch(`/api/installment-plans/${planId}/installments`);
-    if (!res.ok) return;
-    const lista: Cuota[] = await res.json();
-    setCuotasDe((prev) => ({ ...prev, [planId]: lista }));
-  }
   useEffect(() => {
     void cargar();
+  }, [cargar]);
+
+  useEffect(() => {
+    api.categorias().then(setCategorias).catch(() => setCategorias([]));
   }, []);
 
-  async function crear(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!total || !nValido) return;
-    setEnviando(true);
+  useEffect(() => {
+    if (!menuRango) return;
+    const fuera = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuRango(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setMenuRango(false);
+    document.addEventListener("mousedown", fuera);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", fuera);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [menuRango]);
+
+  const visibles = movs.filter(
+    (m) =>
+      (filtro === "TODOS" || m.type === filtro) &&
+      (pendientes || m.status !== "PENDING") &&
+      m.status !== "CANCELLED",
+  );
+
+  // Un solo recorrido: los totales del rango y el agrupado por día salen de las
+  // mismas filas que se muestran. Si se calcularan aparte podrían discrepar.
+  const porDia = new Map<string, Movimiento[]>();
+  let gastos = 0;
+  let ingresos = 0;
+  for (const m of visibles) {
+    const arr = porDia.get(m.date) ?? [];
+    arr.push(m);
+    porDia.set(m.date, arr);
+    if (m.status === "CONFIRMED") {
+      if (m.type === "EXPENSE") gastos += m.amount;
+      else ingresos += m.amount;
+    }
+  }
+
+  async function confirmar(id: string) {
     try {
-      const res = await fetch("/api/installment-plans", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          type: tipo,
-          description: descripcion,
-          category: categoria,
-          totalAmount: total,
-          installmentCount: n,
-          startDate: desde,
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.errors?.[0]?.message ? `${body.title}: ${body.errors[0].message}` : body.title);
-        return;
-      }
-      setCuotasDe((prev) => ({ ...prev, [body.plan.id]: body.installments }));
-      setAbierto(body.plan.id);
-      setAviso(`${body.plan.description} · ${body.plan.installmentCount} cuotas`);
-      setTimeout(() => setAviso(null), 3200);
+      await api.confirmar(id);
       await cargar();
-    } catch {
-      setError("No se pudo hablar con el servidor. ¿Está corriendo la API?");
-    } finally {
-      setEnviando(false);
+      setAviso("Movimiento confirmado");
+      setTimeout(() => setAviso(null), 2600);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "No se pudo confirmar");
     }
   }
 
@@ -140,264 +123,211 @@ export function App() {
       <header className="topbar">
         <div className="mark">A</div>
         <h1>Accrue</h1>
-        <span className="where">Compras en cuotas</span>
+        <nav className="nav">
+          <button className="navitem" aria-current="page">Movimientos</button>
+          <button className="navitem" disabled title="Todavía no">Dashboard</button>
+          <button className="navitem" disabled title="Todavía no">Administración</button>
+        </nav>
       </header>
 
+      <div className="toolbar">
+        <div className="menu-anchor" ref={menuRef}>
+          <button
+            className="btn ghost"
+            aria-haspopup="true"
+            aria-expanded={menuRango}
+            onClick={() => setMenuRango((v) => !v)}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path d="M8 3v4M16 3v4M3 10h18" />
+            </svg>
+            {rango.etiqueta}
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <div className={`menu${menuRango ? " open" : ""}`} role="menu">
+            <div className="menu-label">Rango</div>
+            {opciones.map((r) => (
+              <button
+                key={r.etiqueta}
+                className="menu-item"
+                role="menuitemradio"
+                aria-checked={r.etiqueta === rango.etiqueta}
+                onClick={() => {
+                  setRango(r);
+                  setMenuRango(false);
+                }}
+              >
+                {r.etiqueta}
+                {r.desde && <span className="rng num">{r.desde.slice(8)}–{r.hasta.slice(8)}</span>}
+                <svg className="tick" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="seg">
+          <button aria-pressed={filtro === "TODOS"} onClick={() => setFiltro("TODOS")}>Todos</button>
+          <button aria-pressed={filtro === "EXPENSE"} onClick={() => setFiltro("EXPENSE")}>Gastos</button>
+          <button aria-pressed={filtro === "INCOME"} onClick={() => setFiltro("INCOME")}>Ingresos</button>
+        </div>
+
+        <label className="sw-toggle">
+          <input type="checkbox" checked={pendientes} onChange={(e) => setPendientes(e.target.checked)} />
+          <span className="track"><span className="knob" /></span>
+          Incluir pendientes
+        </label>
+
+        <div className="spacer" />
+
+        <button className="btn primary" onClick={() => setAbrirAlta(true)}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Nueva compra en cuotas
+        </button>
+      </div>
+
       <main className="main">
-        <div className="page">
-          <section>
-            <div className="head">
-              <h2>Nueva compra en cuotas</h2>
-              <p>
-                El reparto lo hace el dominio, no esta pantalla: lo que ves abajo es exactamente lo
-                que se va a guardar.
-              </p>
+        <div className="ledger">
+          <div className="totales">
+            <div className="tot">
+              <span className="k">Gastado</span>
+              <span className="v num">{formatCentavos(-gastos)}</span>
             </div>
-
-            <div className="card card-pad">
-              <form className="form" onSubmit={crear}>
-                <div className="field">
-                  <label htmlFor="f-tipo">Tipo</label>
-                  <div className="seg" id="f-tipo">
-                    <button
-                      type="button"
-                      aria-pressed={tipo === "EXPENSE"}
-                      onClick={() => setTipo("EXPENSE")}
-                    >
-                      Gasto
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={tipo === "INCOME"}
-                      onClick={() => setTipo("INCOME")}
-                    >
-                      Ingreso
-                    </button>
-                  </div>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="f-desc">Descripción</label>
-                  <input
-                    id="f-desc"
-                    className="input"
-                    value={descripcion}
-                    maxLength={60}
-                    onChange={(e) => setDescripcion(e.target.value)}
-                  />
-                  <span className="hint">Lo que vas a reconocer dentro de seis meses.</span>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="f-cat">Categoría</label>
-                  <select
-                    id="f-cat"
-                    className="select"
-                    value={categoria}
-                    onChange={(e) => setCategoria(e.target.value)}
-                  >
-                    {CATEGORIAS.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="row2">
-                  <div className="field">
-                    <label htmlFor="f-total">Total</label>
-                    <input
-                      id="f-total"
-                      className="input money num"
-                      inputMode="numeric"
-                      value={importe}
-                      onChange={(e) => setImporte(e.target.value)}
-                    />
-                    <span className="hint">Pesos enteros.</span>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="f-cuotas">Cuotas</label>
-                    <input
-                      id="f-cuotas"
-                      className={`input num${cuotas && !nValido ? " bad" : ""}`}
-                      inputMode="numeric"
-                      value={cuotas}
-                      onChange={(e) => setCuotas(e.target.value)}
-                    />
-                    {cuotas && !nValido ? (
-                      <span className="hint err">Entre 2 y 120. Con una sola no es un plan.</span>
-                    ) : (
-                      <span className="hint">Mínimo 2.</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="f-desde">Primera cuota</label>
-                  <input
-                    id="f-desde"
-                    className="input num"
-                    type="date"
-                    value={desde}
-                    onChange={(e) => setDesde(e.target.value)}
-                  />
-                  <span className="hint">
-                    Puede ser pasada: las cuotas de meses ya cerrados nacen confirmadas.
-                  </span>
-                </div>
-
-                {partes && primera !== null && resto !== null ? (
-                  <dl className="preview">
-                    {/* El reparto puede diferir en centavos, y la presentación es
-                        en pesos enteros: mostrar dos líneas con el MISMO número
-                        y un cartel diciendo que no divide exacto se lee como un
-                        error. Cuando la diferencia no se ve en pesos, va una
-                        sola línea y el resto se nombra en centavos, que es donde
-                        realmente está. */}
-                    {visibleEnPesos ? (
-                      <>
-                        <div className="line">
-                          <dt>Primera cuota</dt>
-                          <dd className="num">{formatCentavos(primera)}</dd>
-                        </div>
-                        <div className="line">
-                          <dt>Las otras {n - 1}</dt>
-                          <dd className="num">{formatCentavos(resto)}</dd>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="line">
-                        <dt>Cada cuota</dt>
-                        <dd className="num">{formatCentavos(resto)}</dd>
-                      </div>
-                    )}
-                    <div className="line">
-                      <dt>Suma</dt>
-                      <dd className="num">{formatCentavos(partes.reduce((a, b) => a + b, 0))}</dd>
-                    </div>
-                    {hayResto && (
-                      <p className="note">
-                        No divide exacto: la primera cuota lleva {formatCentavosExactos(diferencia)}{" "}
-                        más. El resto siempre cae en la tuya, nunca en la de un tercero.
-                      </p>
-                    )}
-                  </dl>
-                ) : null}
-
-                {error && (
-                  <div className="problem" role="alert">
-                    <strong>No se pudo crear el plan</strong>
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                <button
-                  className="btn primary"
-                  type="submit"
-                  disabled={enviando || !total || !nValido || !descripcion.trim()}
-                >
-                  {enviando ? "Creando…" : "Crear plan"}
-                </button>
-              </form>
+            <div className="tot">
+              <span className="k">Ingresos</span>
+              {/* El verde significa ingreso. Cero no es un ingreso: va en neutro. */}
+              <span className={`v num${ingresos > 0 ? " pos" : ""}`}>
+                {ingresos > 0 ? formatCentavos(ingresos, { sign: true }) : "$ 0"}
+              </span>
             </div>
-          </section>
-
-          <section>
-            <div className="head">
-              <h2>Planes activos</h2>
-              <p>Tocá uno para ver sus cuotas, con el estado con el que nacieron.</p>
+            <div className="tot">
+              <span className="k">Resultado</span>
+              <span className={`v num${ingresos - gastos > 0 ? " pos" : ""}`}>
+                {ingresos - gastos === 0 ? "$ 0" : formatCentavos(ingresos - gastos, { sign: true })}
+              </span>
             </div>
+            <p className="tot-note">Sólo lo confirmado. Los pendientes no son hechos.</p>
+          </div>
 
+          {error && (
+            <div className="problem" role="alert">
+              <strong>Algo falló</strong>
+              <span>{error}</span>
+            </div>
+          )}
+
+          {cargando ? (
             <div className="card">
-              {planes.length === 0 ? (
-                <p className="empty">
-                  Todavía no hay ningún plan.
-                  <br />
-                  El primero que cargues aparece acá.
-                </p>
-              ) : (
-                planes.map((p) => {
-                  const abiertoEste = abierto === p.id;
-                  const lista = cuotasDe[p.id];
-                  return (
-                    <div className="plan" key={p.id}>
-                      <button
-                        className="plan-head"
-                        aria-expanded={abiertoEste}
-                        style={{ ["--c" as string]: `var(${colorDe(p.category ?? "otros")})` }}
-                        onClick={() => { setAbierto(abiertoEste ? null : p.id); if (!abiertoEste) void traerCuotas(p.id); }}
-                      >
-                        <span className="catico">{p.installmentCount}</span>
-                        <span className="body">
-                          <span className="t1">{p.description}</span>
-                          <span className="t2">
-                            {p.installmentCount} cuotas · desde {formatMesAnio(p.startDate)} ·{" "}
-                            {p.paidCount} pagas
-                          </span>
-                        </span>
-                        <span className="amt num">{formatCentavos(-p.totalAmount)}</span>
-                        <svg
-                          className="chev"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M9 6l6 6-6 6" />
-                        </svg>
-                      </button>
-                      <div className={`drawer${abiertoEste ? " open" : ""}`}>
-                        <div>
-                          {lista ? (
-                            <div className="cuotas">
-                              {lista.map((c) => (
-                                <div className="cuota" key={c.id}>
-                                  <span className="n num">{c.number}</span>
-                                  <span className="f num">{formatFecha(c.date)}</span>
-                                  <span className={`tag ${c.status}`}>
-                                    <i />
-                                    {c.status === "CONFIRMED" ? "Confirmada" : "Pendiente"}
-                                  </span>
-                                  <span className="m num">{formatCentavos(-c.amount)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="empty" style={{ padding: "var(--s5)" }}>
-                              Buscando las cuotas…
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+              {[0, 1, 2].map((i) => (
+                <div className="sk-row" key={i}>
+                  <span className="sk circle" style={{ width: 32, height: 32 }} />
+                  <span style={{ flex: 1, display: "grid", gap: 6 }}>
+                    <span className="sk" style={{ width: `${46 - i * 8}%`, height: 11 }} />
+                    <span className="sk" style={{ width: `${30 + i * 6}%`, height: 9 }} />
+                  </span>
+                  <span className="sk" style={{ width: 66, height: 12 }} />
+                </div>
+              ))}
             </div>
-          </section>
+          ) : visibles.length === 0 ? (
+            <div className="card">
+              <div className="empty">
+                <p style={{ margin: 0, fontWeight: 600, color: "var(--ink-mute)" }}>
+                  No hay movimientos en {rango.etiqueta.toLowerCase()}.
+                </p>
+                <p style={{ margin: "6px 0 0" }}>
+                  Cargá una compra en cuotas y sus cuotas aparecen acá, una por mes.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="card">
+              {[...porDia.entries()].map(([dia, delDia], gi) => {
+                const suma = delDia.reduce(
+                  (a, m) => a + (m.type === "EXPENSE" ? -m.amount : m.amount),
+                  0,
+                );
+                return (
+                  <section key={dia}>
+                    <div className="daybar">
+                      <span>{formatFechaLarga(dia)}</span>
+                      <span className="sum num">{formatCentavos(suma, { sign: true })}</span>
+                    </div>
+                    {delDia.map((m, i) => {
+                      const vencido = estaVencido(m);
+                      return (
+                        <div
+                          className="row"
+                          key={m.id}
+                          style={{
+                            ["--c" as string]: `var(${VAR[m.category] ?? "--c-otros"})`,
+                            ["--d" as string]: `${Math.min((gi * 3 + i) * 35, 300)}ms`,
+                          }}
+                        >
+                          <span className="catico">
+                            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                              <path d={ICONOS[m.category] ?? ICONOS.otros!} />
+                            </svg>
+                          </span>
+                          <span className="body">
+                            <span className="t1">{m.description}</span>
+                            <span className="t2">
+                              {categorias.find((c) => c.id === m.category)?.name ?? m.category}
+                              {m.installmentId && " · cuota"}
+                              {m.status === "PENDING" && (
+                                <span className={`tag ${vencido ? "vencido" : "pendiente"}`}>
+                                  <i />
+                                  {vencido ? "Vencido" : "Pendiente"}
+                                </span>
+                              )}
+                            </span>
+                          </span>
+                          {m.status === "PENDING" && (
+                            <button className="btn quiet mini" onClick={() => void confirmar(m.id)}>
+                              Confirmar
+                            </button>
+                          )}
+                          <span className={`amt num${m.type === "INCOME" ? " pos" : ""}`}>
+                            {formatCentavos(m.type === "EXPENSE" ? -m.amount : m.amount, {
+                              sign: m.type === "INCOME",
+                            })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </section>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
 
+      {abrirAlta && (
+        <NuevaCuotas
+          categorias={categorias}
+          onCerrar={() => setAbrirAlta(false)}
+          onCreado={(desc, n) => {
+            setAbrirAlta(false);
+            setAviso(`${desc} · ${n} cuotas`);
+            setTimeout(() => setAviso(null), 3200);
+            void cargar();
+          }}
+        />
+      )}
+
       {aviso && (
         <div className="toast" role="status">
-          <svg
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--ingreso)"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ingreso)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6L9 17l-5-5" />
           </svg>
-          Plan creado · {aviso}
+          {aviso}
         </div>
       )}
     </div>

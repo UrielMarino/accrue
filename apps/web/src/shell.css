@@ -1,0 +1,425 @@
+/* Shell de la app: barra superior, barra de herramientas, ledger y el panel de
+   alta. Lo que estaba antes (formulario permanente ocupando media pantalla) era
+   un andamio de pruebas; el alta es un acto, no una pantalla. */
+
+.shell {
+  grid-template-rows: auto auto 1fr;
+}
+
+.nav {
+  display: flex;
+  gap: 2px;
+  margin-left: var(--s4);
+}
+.navitem {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background var(--t-ui) var(--e-out), color var(--t-ui) var(--e-out);
+}
+.navitem:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+.navitem[aria-current="page"] {
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+.navitem:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  padding: var(--s3) var(--s5);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.toolbar .spacer {
+  flex: 1;
+}
+.toolbar .seg {
+  width: auto;
+}
+.toolbar .seg button {
+  flex: none;
+}
+
+.ledger {
+  max-width: 780px;
+  margin: 0 auto;
+  display: grid;
+  gap: var(--s4);
+}
+
+.totales {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s4);
+  padding: var(--s4) var(--s5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-1);
+}
+.tot {
+  display: grid;
+  gap: 2px;
+}
+.tot .k {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.tot .v {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.tot .v.pos {
+  color: var(--ingreso);
+}
+.tot-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+.daybar {
+  padding: var(--s4) var(--s5) 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.daybar .sum {
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-mute);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: 9px var(--s5);
+  transition: background var(--t-ui) var(--e-out);
+  opacity: 0;
+  animation: rowin 420ms var(--e-out) forwards;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes rowin {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.row:hover {
+  background: var(--surface-hover);
+}
+.row:hover .catico {
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  color: var(--c);
+}
+.row .body {
+  flex: 1;
+  min-width: 0;
+}
+.row .t1 {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row .t2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+.row .amt {
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  flex: none;
+  min-width: 96px;
+  text-align: right;
+}
+.row .amt.pos {
+  color: var(--ingreso);
+}
+
+.btn.mini {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: var(--r-xs);
+  opacity: 0;
+  transition: opacity var(--t-ui) var(--e-out), background var(--t-ui) var(--e-out);
+}
+.row:hover .btn.mini,
+.btn.mini:focus-visible {
+  opacity: 1;
+}
+.btn.quiet {
+  background: transparent;
+  color: var(--ink-mute);
+}
+.btn.quiet:hover {
+  background: var(--surface-press);
+  color: var(--ink);
+}
+.btn.icon {
+  width: 34px;
+  padding: 0;
+}
+
+.tag.vencido {
+  background: var(--vencido-wash);
+  color: var(--vencido);
+}
+.tag.pendiente {
+  background: var(--pendiente-wash);
+  color: var(--pendiente);
+}
+
+.menu-anchor {
+  position: relative;
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 232px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--lift-3);
+  padding: 5px;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+  transform-origin: top left;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity var(--t-ui) var(--e-out), transform 320ms var(--spring),
+    visibility 0s linear var(--t-ui);
+}
+.menu.open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  visibility: visible;
+  transition-delay: 0s;
+}
+.menu-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 7px 10px 4px;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  padding: 8px 10px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-tap) var(--e-out);
+}
+.menu-item:hover {
+  background: var(--surface-hover);
+}
+.menu-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.menu-item .rng {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+.menu-item .tick {
+  color: var(--accent);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--t-ui), transform 300ms var(--spring);
+  flex: none;
+}
+.menu-item:not(:has(.rng)) .tick {
+  margin-left: auto;
+}
+.menu-item[aria-checked="true"] {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.menu-item[aria-checked="true"] .tick {
+  opacity: 1;
+  transform: none;
+}
+
+.sw-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ink-mute);
+}
+.sw-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.track {
+  width: 38px;
+  height: 22px;
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
+  position: relative;
+  transition: background var(--t-ui) var(--e-out);
+  flex: none;
+}
+.knob {
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--lift-1);
+  transition: transform 450ms var(--spring);
+}
+.sw-toggle input:checked + .track {
+  background: var(--accent);
+}
+.sw-toggle input:checked + .track .knob {
+  transform: translateX(16px);
+}
+.sw-toggle input:focus-visible + .track {
+  box-shadow: var(--focus);
+}
+
+/* El alta, encima de todo. Escala desde abajo con spring: se tiene que ver que
+   entró, no aparecer de la nada en el centro. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--ink) 34%, transparent);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: var(--s4);
+  animation: scrimin 180ms var(--e-out);
+}
+@keyframes scrimin {
+  from {
+    opacity: 0;
+  }
+}
+.sheet {
+  width: min(480px, 100%);
+  max-height: min(88dvh, 780px);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-3);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  animation: sheetin 340ms var(--spring);
+}
+@keyframes sheetin {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line);
+}
+.sheet-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+}
+.sheet-body {
+  padding: var(--s5);
+  display: grid;
+  gap: var(--s4);
+  overflow-y: auto;
+  align-content: start;
+}
+.sheet-foot {
+  display: flex;
+  gap: var(--s2);
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  margin-top: var(--s2);
+  padding-block-start: var(--s4);
+}
+.preview-vacio {
+  margin: 0;
+  padding: var(--s4);
+  background: var(--surface-sunk);
+  border-radius: var(--r-md);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+@media (max-width: 620px) {
+  .totales {
+    grid-template-columns: 1fr 1fr;
+  }
+  .nav {
+    display: none;
+  }
+  .row .amt {
+    min-width: 0;
+  }
+}
