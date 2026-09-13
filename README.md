@@ -24,8 +24,11 @@ The visual system was settled before any screen was built — palette, type scal
 | Path | What it is |
 | --- | --- |
 | `MODEL.md` | The domain contract. Binding. Read this first. |
-| `domain/` | Pure domain logic and its tests — allocation, ledger, installments, recurring, reports. No I/O. |
-| `contracts/` | Shared request/response types between server and client. |
+| `packages/domain/` | Pure domain logic and its tests — allocation, ledger, installments, recurring, reports. No I/O. |
+| `packages/contracts/` | Shared request/response types between server and client. |
+| `apps/api/` | HTTP and persistence. Calculates no money: it calls the domain and stores what comes back. |
+| `apps/web/` | The screens. |
+| [`docs/UI.md`](docs/UI.md) | How the ledger presents each kind of movement, where debts live, and why the list is not paginated. Derived from MODEL.md. |
 | `docs/reference/` | Carried over from the previous attempt for reference only. Not wired into anything. |
 
 Money is stored as **integer centavos (ARS)**. Every split — installments, shared expenses — goes through a single allocation function, and the remainder falls on the first share, which is always yours. It is never on a third party.

@@ -207,11 +207,14 @@ export function App() {
               </span>
             </div>
             <div className="tot">
-              <span className="k">Resultado</span>
+              <span className="k">Diferencia</span>
               <span className={`v num${ingresos - gastos > 0 ? " pos" : ""}`}>
                 {ingresos - gastos === 0 ? "$ 0" : formatCentavos(ingresos - gastos, { sign: true })}
               </span>
             </div>
+            {/* "Resultado" está reservado por MODEL.md §9/§10 para ingresos menos
+                gastos devengados del MES, y vive en Informes. Esto es la diferencia
+                de un rango arbitrario: es una composición y lleva nombre propio. */}
             <p className="tot-note">Sólo lo confirmado. Los pendientes no son hechos.</p>
           </div>
 
