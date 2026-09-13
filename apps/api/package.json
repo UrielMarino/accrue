@@ -1,0 +1,29 @@
+{
+  "name": "@accrue/api",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc --build",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "typecheck": "tsc --build",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@accrue/contracts": "workspace:*",
+    "@accrue/domain": "workspace:*",
+    "@hono/node-server": "^1.13.7",
+    "@libsql/client": "^0.18.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.6.16",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.13"
+  }
+}

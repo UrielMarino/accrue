@@ -35,3 +35,8 @@ pnpm-debug.log*
 /data/
 
 dist/
+
+# base local
+*.db
+*.db-wal
+*.db-shm

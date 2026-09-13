@@ -4,3 +4,7 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # Peer opcional de drizzle-orm que no usamos: la app va con el SQLite que
+  # Node trae incorporado. Sin binario precompilado para Node 25, compilarlo
+  # falla — y no hace falta.
+  better-sqlite3: false
