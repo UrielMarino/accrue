@@ -2,9 +2,13 @@ packages:
   - "packages/*"
   - "apps/*"
 
+# Scripts de instalación permitidos. pnpm 11 reemplazó `onlyBuiltDependencies`
+# por esta clave: si una guía vieja te dice lo contrario, la guía es vieja.
+# Editar ESTE archivo a mano — `pnpm config set` lo reescribe con un placeholder
+# ("set this to true or false") y rompe el install.
 allowBuilds:
   esbuild: true
-  # Peer opcional de drizzle-orm que no usamos: la app va con el SQLite que
-  # Node trae incorporado. Sin binario precompilado para Node 25, compilarlo
-  # falla — y no hace falta.
+  # Peer opcional de drizzle-orm que NO usamos: la app va sobre libSQL, que trae
+  # binarios precompilados. better-sqlite3 no tiene prebuild para Node 25 y
+  # compilarlo falla; dejarlo en `false` corta el intento sin ruido.
   better-sqlite3: false

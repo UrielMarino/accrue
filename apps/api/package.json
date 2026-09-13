@@ -16,9 +16,9 @@
     "@accrue/contracts": "workspace:*",
     "@accrue/domain": "workspace:*",
     "@hono/node-server": "^1.13.7",
-    "@libsql/client": "^0.18.0",
-    "drizzle-orm": "^0.45.2",
-    "hono": "^4.6.16",
+    "@libsql/client": "0.18.0",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.13.7",
     "zod": "^4.0.0"
   },
   "devDependencies": {

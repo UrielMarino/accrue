@@ -110,16 +110,47 @@ export function installmentRoutes(db: Db) {
   });
 
   app.get("/", async (c) => {
-    const plans = await db.select().from(installmentPlans);
+    // La categoría no vive en el plan sino en sus cuotas — un plan no es un
+    // movimiento. Se lee de ahí en vez de duplicarla en dos tablas, que es
+    // exactamente el tipo de dato repetido que el modelo prohíbe (§0.2).
+    const rows = await db
+      .select({
+        id: installmentPlans.id,
+        description: installmentPlans.description,
+        totalAmount: installmentPlans.totalAmount,
+        installmentCount: installmentPlans.installmentCount,
+        paidCount: installmentPlans.paidCount,
+        startDate: installmentPlans.startDate,
+        status: installmentPlans.status,
+        category: movements.categoryId,
+        type: movements.type,
+      })
+      .from(installmentPlans)
+      .leftJoin(movements, eq(movements.installmentId, installmentPlans.id))
+      .groupBy(installmentPlans.id)
+      .orderBy(installmentPlans.startDate);
+
+    return c.json(rows);
+  });
+
+  /** Las cuotas de un plan, numeradas por fecha igual que en el alta. */
+  app.get("/:id/installments", async (c) => {
+    const planId = c.req.param("id");
+    const rows = await db
+      .select()
+      .from(movements)
+      .where(eq(movements.installmentId, planId))
+      .orderBy(movements.date);
+
+    if (rows.length === 0) return problem(c, 404, "Ese plan no existe o no tiene cuotas");
+
     return c.json(
-      plans.map((p) => ({
-        id: p.id,
-        description: p.description,
-        totalAmount: p.totalAmount,
-        installmentCount: p.installmentCount,
-        paidCount: p.paidCount,
-        startDate: p.startDate,
-        status: p.status,
+      rows.map((m, i) => ({
+        id: m.id,
+        number: i + 1,
+        amount: m.amount,
+        date: m.date,
+        status: m.status,
       })),
     );
   });

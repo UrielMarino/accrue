@@ -7,13 +7,16 @@
   "type": "module",
   "packageManager": "pnpm@12.4.1",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.5.0 <26",
+    "pnpm": ">=11"
   },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --build && tsc -p tsconfig.test.json",
-    "check": "pnpm run typecheck && pnpm run test"
+    "typecheck": "tsc --build && tsc -p tsconfig.test.json && pnpm --filter @accrue/web typecheck",
+    "check": "pnpm run typecheck && pnpm run test",
+    "preinstall": "npx --yes only-allow pnpm",
+    "dev": "pnpm --parallel --filter @accrue/api --filter @accrue/web dev"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

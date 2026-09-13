@@ -1,0 +1,127 @@
+/* Los tokens del sistema de diseño aprobado. Ninguna clase de la app toca un
+   hex: todo sale de acá, y el tema oscuro es redefinir estos mismos nombres. */
+
+:root {
+  --ground: #f4f6f8;
+  --surface: #ffffff;
+  --surface-sunk: #edf1f5;
+  --surface-hover: #f0f4f9;
+  --surface-press: #e4ebf3;
+
+  --ink: #0f1723;
+  --ink-soft: #3e4c5c;
+  --ink-mute: #5e6e80;
+  --ink-faint: #8a98a8;
+  --line: #e3e9f0;
+  --line-strong: #cfd9e4;
+
+  --accent: #1667e0;
+  --accent-ink: #0e4cab;
+  --accent-wash: #eaf1fd;
+  --accent-edge: #bbd3f8;
+  --on-accent: #ffffff;
+
+  --ingreso: #0f9d63;
+  --pendiente: #9a6a00;
+  --pendiente-wash: #fbf1df;
+  --vencido: #c4443a;
+  --vencido-wash: #fcebe9;
+  --cancelado: #7a8797;
+  --cancelado-wash: #eef1f5;
+
+  --c-alimentos: #e0803f;
+  --c-vivienda: #6b5ce0;
+  --c-transporte: #1f9e92;
+  --c-salud: #d4568a;
+  --c-ocio: #c0553d;
+  --c-servicios: #7e9a2b;
+  --c-ahorro: #0f9d63;
+  --c-otros: #7a8797;
+
+  --lift-1: 0 1px 2px rgba(15, 23, 35, 0.06);
+  --lift-2: 0 6px 16px -4px rgba(15, 23, 35, 0.12), 0 2px 4px rgba(15, 23, 35, 0.05);
+  --lift-3: 0 18px 40px -12px rgba(15, 23, 35, 0.22), 0 4px 10px rgba(15, 23, 35, 0.07);
+  --lift-key: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 1px 2px rgba(10, 40, 90, 0.28),
+    0 6px 16px -6px rgba(22, 103, 224, 0.55);
+  --press-key: 0 1px 3px rgba(10, 40, 90, 0.4) inset;
+
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+  --s10: 40px;
+  --s12: 48px;
+
+  --t-tap: 90ms;
+  --t-ui: 160ms;
+  --t-panel: 220ms;
+  --t-data: 800ms;
+  --e-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --focus: 0 0 0 3px var(--accent-edge);
+  color-scheme: light;
+}
+
+/* Spring real donde el navegador lo soporte: un cubic-bezier no rebota. */
+@supports (animation-timing-function: linear(0, 1)) {
+  :root {
+    --spring: linear(
+      0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121,
+      1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.4%, 1.051 39%, 1.017 42.1%, 0.991,
+      0.977 47.2%, 0.974 49.1%, 0.975 51.3%, 0.997 60.6%, 1.003 63.1%, 1.006 65.9%, 1.001 73.2%, 1
+    );
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d131b;
+    --surface: #141c26;
+    --surface-sunk: #101821;
+    --surface-hover: #1b2531;
+    --surface-press: #222e3c;
+    --ink: #e8eef5;
+    --ink-soft: #c2cdda;
+    --ink-mute: #93a2b4;
+    --ink-faint: #6c7c8e;
+    --line: #243040;
+    --line-strong: #33445a;
+    --accent: #4d91f5;
+    --accent-ink: #9bc2fb;
+    --accent-wash: #152539;
+    --accent-edge: #2b4e7f;
+    --on-accent: #08111e;
+    --ingreso: #3cc68d;
+    --pendiente: #d8a23c;
+    --pendiente-wash: #2a2213;
+    --vencido: #e8756a;
+    --vencido-wash: #2b1715;
+    --cancelado: #7e8c9c;
+    --cancelado-wash: #1a222c;
+    --c-alimentos: #f0a063;
+    --c-vivienda: #9585f0;
+    --c-transporte: #3ec4b4;
+    --c-salud: #ec7ca6;
+    --c-ocio: #e57c63;
+    --c-servicios: #a8c44e;
+    --c-ahorro: #3cc68d;
+    --c-otros: #8c9aaa;
+    --lift-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --lift-2: 0 6px 16px -4px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.4);
+    --lift-3: 0 18px 40px -12px rgba(0, 0, 0, 0.7), 0 4px 10px rgba(0, 0, 0, 0.45);
+    --lift-key: 0 1px 0 rgba(255, 255, 255, 0.16) inset, 0 2px 6px rgba(0, 0, 0, 0.5),
+      0 8px 20px -8px rgba(77, 145, 245, 0.5);
+    --press-key: 0 1px 3px rgba(0, 0, 0, 0.55) inset;
+    color-scheme: dark;
+  }
+}

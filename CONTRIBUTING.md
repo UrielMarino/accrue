@@ -40,3 +40,21 @@ wrote.
 ## Security
 
 Please do not open a public issue for a security problem. Use GitHub's private vulnerability reporting on this repository instead.
+
+## Toolchain
+
+Node **22.5 – 25** and **pnpm 11+**. `pnpm install` refuses other package
+managers, and the engines field will stop you on a Node that cannot run this.
+
+Two settings exist for a reason and should not be "cleaned up":
+
+- **`allowBuilds` in `pnpm-workspace.yaml`.** pnpm 11 replaced
+  `onlyBuiltDependencies` with it. Edit that file by hand — `pnpm config set`
+  rewrites it with a placeholder and breaks the install.
+- **`better-sqlite3: false`.** It is an optional peer of drizzle-orm that this
+  project does not use; the database goes through libSQL, which ships prebuilt
+  binaries. Left unpinned, npm tries to compile it and fails on recent Node.
+
+The database driver and ORM versions are pinned exactly, not with a caret. The
+SQLite driver landscape moves, and a silent minor bump here means the app stops
+opening its own database.
